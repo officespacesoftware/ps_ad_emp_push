@@ -9,15 +9,15 @@ $filter        = "(objectClass=user)"
 $ad_Photo_Attribute = "thumbnailPhoto";
 $ad_Id_Attribute = "email";
 
-$ad_attributes = "sAMAccountName","email", $ad_Photo_Attribute
+$ad_attributes = "sAMAccountName",$ad_Id_Attribute,$ad_Photo_Attribute
 
 $apiGetEmployees = "/api/1/employees"
 $apiPutEmployees = "/api/1/employees/"
 
-#importing module with all cmdlets
+#importing module for get_adusers
 Import-Module ActiveDirectory
 
-#prepare an MD5 converter
+#prepare a MD5 calculator
 $md5 = New-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider;
 
 Write-Host "Getting records from OfficeSpace"
@@ -34,22 +34,24 @@ Write-Host "Getting records from AD"
 $OUDNsSplit = $OUDN.Split(";")
 $ADusersinOU = $OUDNsSplit[0..($OUDNsSplit.count-2)] | foreach {Get-ADUser -LDAPFilter $filter -SearchScope SubTree -SearchBase $_ -Properties $ad_attributes}
 
+Write-Host "Found $($ADusersinOU.Count) RECORDS"
+
 Write-Host "Updating OfficeSpace"
 # for each record from AD
 #  compare AD.md5 with OSS.md5 image_source_fingerprint
 #  if they are different then update OSS 
 foreach ($ADuser in $ADusersinOU) {
     #if this employee is in OfficeSpace
-    if ($employeeMap.get_item(($ADuser).$empIdAttribute))
+    if ($employeeMap.get_item(($ADuser).$ad_Id_Attribute))
     {
         #get the OfficeSpace employee object from the map
-        $employee = $employeeMap.get_item(($ADuser).$empIdAttribute);
+        $employee = $employeeMap.get_item(($ADuser).$ad_Id_Attribute);
         $empId = ($employee).id;
 
         #get the image data from AD
         $imageDataRaw = "";
-        if (($ADuser).$empPhotoAttribute.value) {
-            $imageDataRaw = ($ADuser).$empPhotoAttribute.value;
+        if (($ADuser).$ad_Photo_Attribute.value) {
+            $imageDataRaw = ($ADuser).$ad_Photo_Attribute.value;
         }
         elseif (($ADuser).$empPhotoAttribute) {
             $imageDataRaw = ($ADuser).$empPhotoAttribute;
